@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
 import { SubmitButton } from "@/components/buttons";
@@ -37,9 +38,12 @@ export default async function LoginPage({
             Sign in
           </SubmitButton>
         </form>
+        <p className="small">
+          New here? <Link href="/signup">Create a business account</Link>
+        </p>
         <p className="small muted">
-          Local demo accounts are listed in the README after running{" "}
-          <span className="mono">npm run db:reset</span>.
+          Crew members join from the invite link their boss sends them. Local demo accounts are
+          listed at the top of <span className="mono">scripts/seed.ts</span>.
         </p>
       </main>
     </>

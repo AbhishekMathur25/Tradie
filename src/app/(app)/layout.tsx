@@ -11,6 +11,7 @@ const OWNER_LINKS = [
   { href: "/payments", label: "Payments" },
   { href: "/customers", label: "Customers" },
   { href: "/price-book", label: "Price list" },
+  { href: "/team", label: "Team" },
   { href: "/outbox", label: "Outbox" },
   { href: "/settings", label: "Settings" },
 ];

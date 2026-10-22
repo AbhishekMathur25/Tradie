@@ -48,6 +48,12 @@ money moves.
 
   Optionally a weekly summary email. It never estimates tax owed or BAS amounts.
 
+- **Accounts:**
+  - **Sign up** at `/signup`: creates the business and its owner account in one step.
+    Passwords need at least 10 characters and are stored as bcrypt hashes.
+  - **Crew join by invite only.** The owner invites them from the Team page; they get a link that
+    works once and expires in 7 days, and set their own password. Only a hash of the invite token
+    is stored. Owners can cancel invites and remove crew.
 - **Roles:** owners see everything. Crew see jobs only, with no money figures anywhere.
 - **Outbox:** every email the app would send, and every accounting push, so you can see exactly
   what would leave the system.
@@ -65,7 +71,7 @@ npm run dev        # http://localhost:3000
 ```
 
 Demo sign-ins (local only) are at the top of [`scripts/seed.ts`](scripts/seed.ts): one owner and
-one crew member. Stop `npm run dev` before running `npm run db:reset`, because PGlite allows one
+one crew member. Or create your own business at http://localhost:3000/signup. Stop `npm run dev` before running `npm run db:reset`, because PGlite allows one
 process at a time.
 
 ### Turning on AI drafting (optional)
@@ -127,9 +133,8 @@ Design rules the code follows:
 - Replace the outbox with a real email provider (`queueEmail` in `src/services/support.ts`).
 - Replace the simulated accounting push with Xero (`pushToAccounting` in the same file).
 - Still to do before real customers:
-  - passkey sign-in
+  - passkey sign-in (replacing passwords), password reset by email, and sign-in rate limiting
   - bank-detail change protection
-  - rate limiting
   - file uploads for contracts and certificates
   - credit notes
   - a lawyer's review of every rule and of the tax wording

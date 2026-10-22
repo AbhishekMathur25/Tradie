@@ -9,12 +9,12 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import type { ActorContext } from "@/services/support";
+import { checkPassword, hashPassword, normaliseEmail } from "./passwords";
 
 const COOKIE_NAME = "tradie_session";
 const SESSION_DAYS = 7;
@@ -35,10 +35,6 @@ function sessionKey(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
 // A real hash to compare against when the email is unknown, so a failed
 // sign-in takes the same time whether or not the account exists.
 let dummyHash: Promise<string> | undefined;
@@ -48,10 +44,10 @@ export async function verifyLogin(email: string, password: string) {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email.trim().toLowerCase()))
+    .where(eq(users.email, normaliseEmail(email)))
     .limit(1);
-  dummyHash ??= bcrypt.hash("no-such-account", 12);
-  const ok = await bcrypt.compare(password, user?.passwordHash ?? (await dummyHash));
+  dummyHash ??= hashPassword("no-such-account");
+  const ok = await checkPassword(password, user?.passwordHash ?? (await dummyHash));
   return ok && user ? user : null;
 }
 

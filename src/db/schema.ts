@@ -57,6 +57,30 @@ export const users = pgTable("users", {
   createdAt: createdAt(),
 });
 
+/**
+ * Crew invitations. Only a SHA-256 hash of the invite token is stored, so a
+ * database leak doesn't hand out working invite links.
+ */
+export const invites = pgTable(
+  "invites",
+  {
+    id: id(),
+    businessId: businessId(),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    role: text("role", { enum: ["crew"] })
+      .notNull()
+      .default("crew"),
+    tokenHash: text("token_hash").notNull().unique(),
+    invitedBy: uuid("invited_by"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("invites_business_idx").on(t.businessId)],
+);
+
 export const customers = pgTable(
   "customers",
   {
@@ -320,3 +344,4 @@ export type Variation = typeof variations.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type CustomerLink = typeof customerLinks.$inferSelect;
+export type Invite = typeof invites.$inferSelect;

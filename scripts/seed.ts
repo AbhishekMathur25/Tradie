@@ -18,7 +18,7 @@ export async function seed() {
   const { getDb } = await import("../src/db/client");
   const schema = await import("../src/db/schema");
   const { addDays, toIsoDate } = await import("../src/domain/dates");
-  const { hashPassword } = await import("../src/lib/auth");
+  const { hashPassword } = await import("../src/lib/passwords");
   const { createCustomer, createPriceItem } = await import("../src/services/directory");
   const { createJob, updateContract, setJobStatus } = await import("../src/services/jobs");
   const docs = await import("../src/services/documents");
