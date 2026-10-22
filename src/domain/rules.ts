@@ -159,7 +159,7 @@ function gstNotice(business: BusinessFacts): RuleResult[] {
     {
       ruleId: "not-gst-registered",
       severity: "info",
-      message: "You're not registered for GST, so this is titled \"Invoice\" and carries no GST.",
+      message: 'You\'re not registered for GST, so this is titled "Invoice" and carries no GST.',
     },
   ];
 }
@@ -193,7 +193,10 @@ export function checkQuoteSend(input: {
 }
 
 /** Checks before a variation is sent for the customer's sign-off. */
-export function checkVariationSend(input: { business: BusinessFacts; job: JobFacts }): RuleResult[] {
+export function checkVariationSend(input: {
+  business: BusinessFacts;
+  job: JobFacts;
+}): RuleResult[] {
   return licenceCheck(input.business, input.job);
 }
 

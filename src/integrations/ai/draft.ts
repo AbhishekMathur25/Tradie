@@ -33,21 +33,21 @@ export async function draftLines(input: {
   const client = new OpenAI({
     apiKey: process.env.AI_API_KEY,
     baseURL: process.env.AI_BASE_URL,
-    timeout: 25_000,
+    timeout: 20_000,
     maxRetries: 1,
   });
   const description = redactPersonalDetails(input.description, input.personalTerms);
 
   try {
+    // Instructions go in the user message: some gateways drop system messages
+    // for some models. No temperature: reasoning models reject or ignore it.
     const response = await client.chat.completions.create({
-      model: process.env.AI_MODEL || "Phi-4-mini-instruct",
+      model: process.env.AI_MODEL || "gpt-5-nano",
       max_tokens: Number(process.env.AI_MAX_TOKENS || 400),
-      temperature: 0,
       messages: [
-        { role: "system", content: DRAFT_SYSTEM_PROMPT },
         {
           role: "user",
-          content: `Price list:\n${priceListForPrompt(input.priceItems)}\n\nJob description:\n${description}`,
+          content: `${DRAFT_SYSTEM_PROMPT}\n\nPrice list:\n${priceListForPrompt(input.priceItems)}\n\nJob description:\n${description}`,
         },
       ],
     });
@@ -55,13 +55,17 @@ export async function draftLines(input: {
     const parsed = parseAiReply(reply, input.priceItems);
     if (parsed) return parsed;
     const result = fallback();
-    result.notes.unshift("The AI reply couldn't be used, so this draft comes from keyword matching.");
+    result.notes.unshift(
+      "The AI reply couldn't be used, so this draft comes from keyword matching.",
+    );
     return result;
   } catch (error) {
     // Never surface provider error text (it can include request details).
     console.error("AI draft failed:", error instanceof Error ? error.name : "unknown error");
     const result = fallback();
-    result.notes.unshift("The AI service didn't respond, so this draft comes from keyword matching.");
+    result.notes.unshift(
+      "The AI service didn't respond, so this draft comes from keyword matching.",
+    );
     return result;
   }
 }

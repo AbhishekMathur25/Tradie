@@ -31,7 +31,12 @@ beforeAll(async () => {
   db = await openPglite(); // in memory, migrated
   const [business] = await db
     .insert(businesses)
-    .values({ name: "Test Renos", licenceNumber: "123456C", licenseeName: "Test Renos Pty Ltd", email: "owner@test.example" })
+    .values({
+      name: "Test Renos",
+      licenceNumber: "123456C",
+      licenseeName: "Test Renos Pty Ltd",
+      email: "owner@test.example",
+    })
     .returning();
   actor = { businessId: business.id, userId: null };
   const customer = await createCustomer(db, actor, {
@@ -117,9 +122,17 @@ describe("quote to paid", () => {
       notes: "",
       plannedOn: "2026-10-30",
     });
-    const input = { kind: "progress" as const, stageLabel: "Waterproofing", lines: line(900_000), notes: "", plannedOn: null };
+    const input = {
+      kind: "progress" as const,
+      stageLabel: "Waterproofing",
+      lines: line(900_000),
+      notes: "",
+      plannedOn: null,
+    };
     await updateInvoice(db, actor, draft.id, draft.version, input);
-    await expect(updateInvoice(db, actor, draft.id, draft.version, input)).rejects.toThrow(/changed/);
+    await expect(updateInvoice(db, actor, draft.id, draft.version, input)).rejects.toThrow(
+      /changed/,
+    );
   });
 
   it("matches a payment once, even if the provider sends it twice", async () => {

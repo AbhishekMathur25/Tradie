@@ -27,7 +27,10 @@ export interface DraftResult {
 /** Lines the price list is shown to the model as: "3|Tiler labour|hour|$85.00". */
 export function priceListForPrompt(items: DraftPriceItem[]): string {
   return items
-    .map((item, index) => `${index + 1}|${item.name}|${item.unit}|$${(item.priceCents / 100).toFixed(2)}`)
+    .map(
+      (item, index) =>
+        `${index + 1}|${item.name}|${item.unit}|$${(item.priceCents / 100).toFixed(2)}`,
+    )
     .join("\n");
 }
 
@@ -90,8 +93,12 @@ export function parseAiReply(reply: string, items: DraftPriceItem[]): DraftResul
   if (!parsed.success) return null;
   const notes: string[] = [];
   const lines: Line[] = [];
+  const byName = new Map(items.map((item) => [item.name.trim().toLowerCase(), item]));
   for (const raw of parsed.data.lines) {
-    const item = raw.i !== undefined ? items[raw.i - 1] : undefined;
+    // Models sometimes write a listed item as a custom line; link it back.
+    const item =
+      (raw.i !== undefined ? items[raw.i - 1] : undefined) ??
+      (raw.d ? byName.get(raw.d.trim().toLowerCase()) : undefined);
     if (item) {
       lines.push({
         description: item.name,
@@ -119,7 +126,18 @@ export function parseAiReply(reply: string, items: DraftPriceItem[]): DraftResul
 
 // Words too generic to identify an item on their own.
 const STOP_WORDS = new Set([
-  "and", "the", "for", "with", "per", "each", "hour", "supply", "install", "labour", "unit", "item",
+  "and",
+  "the",
+  "for",
+  "with",
+  "per",
+  "each",
+  "hour",
+  "supply",
+  "install",
+  "labour",
+  "unit",
+  "item",
 ]);
 
 /** Distinguishing words: lower case, plural "s" dropped, no sizes like "900mm". */
@@ -144,9 +162,11 @@ export function keywordDraft(description: string, items: DraftPriceItem[]): Draf
   for (const item of items) {
     const itemWords = words(item.name);
     const hits = itemWords.filter((word) => descriptionWords.has(word));
-    // Most of an item's distinguishing words must appear in the description.
-    if (hits.length === 0 || hits.length < Math.ceil(itemWords.length / 2)) continue;
-    const firstHit = text.search(new RegExp(`\\b${hits[0]}`));
+    // Short names must match fully ("wall tiling" needs both words, so a
+    // "laundry wall" doesn't match); longer names need at least two words.
+    if (hits.length === 0 || hits.length < Math.min(itemWords.length, 2)) continue;
+    // The quantity sits before whichever matched word comes first.
+    const firstHit = Math.min(...hits.map((word) => text.search(new RegExp(`\\b${word}`))));
     const before = text.slice(Math.max(0, firstHit - 25), firstHit);
     // A number, an optional unit, then at most one word before the item name.
     const quantityMatch = before.match(

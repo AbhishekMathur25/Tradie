@@ -125,5 +125,11 @@ export async function setPriceItemActive(
     .update(priceItems)
     .set({ active })
     .where(and(eq(priceItems.id, priceItemId), eq(priceItems.businessId, actor.businessId)));
-  await audit(db, actor, active ? "price_item.restored" : "price_item.archived", "price_item", priceItemId);
+  await audit(
+    db,
+    actor,
+    active ? "price_item.restored" : "price_item.archived",
+    "price_item",
+    priceItemId,
+  );
 }

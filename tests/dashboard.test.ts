@@ -45,17 +45,62 @@ const base: DashboardInput = {
     },
   ],
   quotes: [
-    { id: "q1", jobId: "job-1", status: "accepted", subtotalCents: 100_000, costCents: 73_000, totalCents: 110_000, sentOn: "2026-08-20", acceptedOn: "2026-08-25" },
+    {
+      id: "q1",
+      jobId: "job-1",
+      status: "accepted",
+      subtotalCents: 100_000,
+      costCents: 73_000,
+      totalCents: 110_000,
+      sentOn: "2026-08-20",
+      acceptedOn: "2026-08-25",
+    },
   ],
   variations: [
-    { id: "v1", jobId: "job-1", number: "V1", status: "approved", totalCents: 210_000, sentOn: "2026-09-10" },
-    { id: "v2", jobId: "job-1", number: "V2", status: "sent", totalCents: 185_000, sentOn: "2026-10-13" },
+    {
+      id: "v1",
+      jobId: "job-1",
+      number: "V1",
+      status: "approved",
+      totalCents: 210_000,
+      sentOn: "2026-09-10",
+    },
+    {
+      id: "v2",
+      jobId: "job-1",
+      number: "V2",
+      status: "sent",
+      totalCents: 185_000,
+      sentOn: "2026-10-13",
+    },
   ],
   invoices: [
-    invoice({ id: "a", totalCents: 1_000_000, gstCents: 90_909, paidCents: 1_000_000, status: "paid", sentOn: "2026-10-02", dueOn: "2026-10-16" }),
+    invoice({
+      id: "a",
+      totalCents: 1_000_000,
+      gstCents: 90_909,
+      paidCents: 1_000_000,
+      status: "paid",
+      sentOn: "2026-10-02",
+      dueOn: "2026-10-16",
+    }),
     invoice({ id: "b", totalCents: 425_000, gstCents: 38_636, paidCents: 0, dueOn: "2026-10-10" }),
-    invoice({ id: "c", totalCents: 300_000, paidCents: 100_000, dueOn: "2026-11-05", sentOn: "2026-10-20" }),
-    invoice({ id: "d", status: "draft", totalCents: 1_240_000, sentOn: null, dueOn: null, plannedOn: "2026-10-24", stageLabel: "Cabinets installed" }),
+    invoice({
+      id: "c",
+      totalCents: 300_000,
+      paidCents: 100_000,
+      dueOn: "2026-11-05",
+      sentOn: "2026-10-20",
+    }),
+    invoice({
+      id: "d",
+      status: "draft",
+      totalCents: 1_240_000,
+      sentOn: null,
+      dueOn: null,
+      plannedOn: "2026-10-24",
+      stageLabel: "Cabinets installed",
+    }),
   ],
   payments: [
     { invoiceId: "a", amountCents: 1_000_000, receivedOn: "2026-10-12" },
@@ -107,6 +152,8 @@ describe("owner dashboard", () => {
   });
 
   it("never shows GST figures for a business that isn't registered", () => {
-    expect(buildDashboard({ ...base, gstRegistered: false }).gstOnInvoicesThisQuarter.cents).toBe(0);
+    expect(buildDashboard({ ...base, gstRegistered: false }).gstOnInvoicesThisQuarter.cents).toBe(
+      0,
+    );
   });
 });

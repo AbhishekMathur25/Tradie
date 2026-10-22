@@ -91,8 +91,20 @@ export const priceItems = pgTable(
   (t) => [index("price_items_business_idx").on(t.businessId)],
 );
 
-export const JOB_STATUSES = ["quoting", "contracted", "in_progress", "completed", "cancelled"] as const;
-export const CONTRACT_KINDS = ["fair_trading", "hia", "master_builders", "own_lawyer", "other"] as const;
+export const JOB_STATUSES = [
+  "quoting",
+  "contracted",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const;
+export const CONTRACT_KINDS = [
+  "fair_trading",
+  "hia",
+  "master_builders",
+  "own_lawyer",
+  "other",
+] as const;
 
 export const jobs = pgTable(
   "jobs",

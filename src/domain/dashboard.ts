@@ -118,7 +118,10 @@ const isLive = (invoice: DashInvoice) => invoice.status === "sent" || invoice.st
 const outstanding = (invoice: DashInvoice) => Math.max(invoice.totalCents - invoice.paidCents, 0);
 
 /** Whether a job's rule checks currently block payment requests, and why. */
-export function paymentBlockReason(job: DashJob, acceptedQuoteTotalCents: number | null): string | null {
+export function paymentBlockReason(
+  job: DashJob,
+  acceptedQuoteTotalCents: number | null,
+): string | null {
   if (!job.residentialBuildingWork) return null;
   const value = job.contractPriceCents ?? acceptedQuoteTotalCents;
   if (value === null) return null;
@@ -150,13 +153,17 @@ export function buildDashboard(input: DashboardInput): Dashboard {
   }
 
   // --- Coming in over the next 30 days (a forecast) ------------------------
-  const dueSoon = unpaid.filter((inv) => inv.dueOn !== null && inv.dueOn >= today && inv.dueOn <= in30);
+  const dueSoon = unpaid.filter(
+    (inv) => inv.dueOn !== null && inv.dueOn >= today && inv.dueOn <= in30,
+  );
   const plannedClaims = input.invoices.filter(
     (inv) => inv.status === "draft" && inv.plannedOn !== null && inv.plannedOn <= in30,
   );
 
   // --- Payments and activity ------------------------------------------------
-  const receivedThisMonth = input.payments.filter((p) => p.receivedOn >= month && p.receivedOn <= today);
+  const receivedThisMonth = input.payments.filter(
+    (p) => p.receivedOn >= month && p.receivedOn <= today,
+  );
   const sentInLast90 = input.quotes.filter((q) => q.sentOn !== null && q.sentOn >= ninetyDaysAgo);
   const wonInLast90 = sentInLast90.filter((q) => q.status === "accepted");
 
@@ -165,12 +172,18 @@ export function buildDashboard(input: DashboardInput): Dashboard {
   for (const quote of input.quotes) {
     if (quote.status === "accepted") acceptedQuoteByJob.set(quote.jobId, quote);
   }
-  const activeJobs = input.jobs.filter((job) => job.status === "contracted" || job.status === "in_progress");
+  const activeJobs = input.jobs.filter(
+    (job) => job.status === "contracted" || job.status === "in_progress",
+  );
   const jobPositions: JobPosition[] = activeJobs.map((job) => {
     const jobInvoices = input.invoices.filter((inv) => inv.jobId === job.id && isLive(inv));
     const jobVariations = input.variations.filter((v) => v.jobId === job.id);
-    const approved = jobVariations.filter((v) => v.status === "approved").reduce((s, v) => s + v.totalCents, 0);
-    const pending = jobVariations.filter((v) => v.status === "sent").reduce((s, v) => s + v.totalCents, 0);
+    const approved = jobVariations
+      .filter((v) => v.status === "approved")
+      .reduce((s, v) => s + v.totalCents, 0);
+    const pending = jobVariations
+      .filter((v) => v.status === "sent")
+      .reduce((s, v) => s + v.totalCents, 0);
     const quote = acceptedQuoteByJob.get(job.id) ?? null;
     const base = job.contractPriceCents ?? quote?.totalCents ?? 0;
     const claimed = jobInvoices.reduce((s, inv) => s + inv.totalCents, 0);
@@ -216,15 +229,23 @@ export function buildDashboard(input: DashboardInput): Dashboard {
       wonValueCents: wonInLast90.reduce((s, q) => s + q.totalCents, 0),
     },
     doneThisMonth: {
-      jobsFinished: input.jobs.filter((j) => j.completedOn !== null && j.completedOn >= month).length,
-      invoicesSent: input.invoices.filter((inv) => inv.sentOn !== null && inv.sentOn >= month).length,
+      jobsFinished: input.jobs.filter((j) => j.completedOn !== null && j.completedOn >= month)
+        .length,
+      invoicesSent: input.invoices.filter((inv) => inv.sentOn !== null && inv.sentOn >= month)
+        .length,
       quotesWon: input.quotes.filter((q) => q.acceptedOn !== null && q.acceptedOn >= month).length,
       paymentsReceived: receivedThisMonth.length,
     },
     gstOnInvoicesThisQuarter: {
       cents: input.gstRegistered
         ? input.invoices
-            .filter((inv) => isLive(inv) && inv.sentOn !== null && inv.sentOn >= quarter.start && inv.sentOn <= quarter.end)
+            .filter(
+              (inv) =>
+                isLive(inv) &&
+                inv.sentOn !== null &&
+                inv.sentOn >= quarter.start &&
+                inv.sentOn <= quarter.end,
+            )
             .reduce((s, inv) => s + inv.gstCents, 0)
         : 0,
       label: quarter.label,
@@ -237,7 +258,11 @@ export function buildDashboard(input: DashboardInput): Dashboard {
 }
 
 /** The pending list. Each item has exactly one place to act on it. */
-function buildNeedsYou(input: DashboardInput, positions: JobPosition[], overdue: DashInvoice[]): NeedsYouItem[] {
+function buildNeedsYou(
+  input: DashboardInput,
+  positions: JobPosition[],
+  overdue: DashInvoice[],
+): NeedsYouItem[] {
   const { today } = input;
   const items: NeedsYouItem[] = [];
   const jobTitle = (jobId: string) => input.jobs.find((job) => job.id === jobId)?.title ?? "Job";
@@ -253,7 +278,10 @@ function buildNeedsYou(input: DashboardInput, positions: JobPosition[], overdue:
     }
   }
 
+  // Don't suggest sending a claim the rule checks would block.
+  const blockedJobs = new Set(positions.filter((p) => p.blockedReason).map((p) => p.jobId));
   for (const inv of input.invoices) {
+    if (blockedJobs.has(inv.jobId)) continue;
     if (inv.status === "draft" && inv.plannedOn !== null && inv.plannedOn <= addDays(today, 3)) {
       items.push({
         severity: "go",
@@ -274,7 +302,11 @@ function buildNeedsYou(input: DashboardInput, positions: JobPosition[], overdue:
   }
 
   for (const variation of input.variations) {
-    if (variation.status === "sent" && variation.sentOn && daysBetween(variation.sentOn, today) >= 7) {
+    if (
+      variation.status === "sent" &&
+      variation.sentOn &&
+      daysBetween(variation.sentOn, today) >= 7
+    ) {
       items.push({
         severity: "warn",
         title: `Variation ${variation.number ?? ""} unsigned for ${daysBetween(variation.sentOn, today)} days · ${jobTitle(variation.jobId)}`,

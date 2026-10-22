@@ -29,7 +29,11 @@ export const newJobSchema = z.object({
   residentialBuildingWork: z.boolean(),
 });
 
-export async function createJob(db: DbOrTx, actor: ActorContext, input: z.infer<typeof newJobSchema>) {
+export async function createJob(
+  db: DbOrTx,
+  actor: ActorContext,
+  input: z.infer<typeof newJobSchema>,
+) {
   await getCustomer(db, actor.businessId, input.customerId); // ensures same business
   const [row] = await db
     .insert(jobs)
@@ -64,7 +68,11 @@ export async function getJobDetail(db: DbOrTx, businessId: string, jobId: string
   const [customer, jobQuotes, jobVariations, jobInvoices] = await Promise.all([
     getCustomer(db, businessId, job.customerId),
     db.select().from(quotes).where(eq(quotes.jobId, jobId)).orderBy(desc(quotes.createdAt)),
-    db.select().from(variations).where(eq(variations.jobId, jobId)).orderBy(desc(variations.createdAt)),
+    db
+      .select()
+      .from(variations)
+      .where(eq(variations.jobId, jobId))
+      .orderBy(desc(variations.createdAt)),
     db.select().from(invoices).where(eq(invoices.jobId, jobId)).orderBy(desc(invoices.createdAt)),
   ]);
   return { job, customer, quotes: jobQuotes, variations: jobVariations, invoices: jobInvoices };
@@ -93,9 +101,15 @@ export async function loadJobFacts(db: DbOrTx, businessId: string, jobId: string
 export const contractSchema = z.object({
   contractPriceCents: z.number().int().positive().nullable(),
   contractKind: z.enum(CONTRACT_KINDS).nullable(),
-  contractSignedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  contractSignedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
   insuranceCertificateNumber: z.string().trim().max(60).nullable(),
-  insuranceCertificateOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  insuranceCertificateOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
 });
 
 /** Records the signed contract and insurance certificate details. */

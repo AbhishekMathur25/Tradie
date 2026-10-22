@@ -8,7 +8,11 @@ import {
   type JobFacts,
 } from "@/domain/rules";
 
-const business: BusinessFacts = { licenceNumber: "123456C", licenseeName: "Harbour Renos Pty Ltd", gstRegistered: true };
+const business: BusinessFacts = {
+  licenceNumber: "123456C",
+  licenseeName: "Harbour Renos Pty Ltd",
+  gstRegistered: true,
+};
 const customer = { name: "A. Customer", abn: "" };
 
 const job = (overrides: Partial<JobFacts> = {}): JobFacts => ({
@@ -82,7 +86,11 @@ describe("NSW rule checks", () => {
     const results = checkInvoiceSend({
       business,
       customer,
-      job: job({ contractPriceCents: null, contractSignedOn: null, acceptedQuoteTotalCents: 800_000 }),
+      job: job({
+        contractPriceCents: null,
+        contractSignedOn: null,
+        acceptedQuoteTotalCents: 800_000,
+      }),
       invoice: { kind: "standard", totalCents: 100_000 },
       otherInvoices: [],
     });

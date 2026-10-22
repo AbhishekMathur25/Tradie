@@ -37,7 +37,10 @@ describe("money", () => {
 
   it("totals a document and only taxes taxable lines", () => {
     const totals = documentTotals(
-      [line({ quantityMilli: 8000 }), line({ description: "Permit", unitPriceCents: 25000, taxable: false })],
+      [
+        line({ quantityMilli: 8000 }),
+        line({ description: "Permit", unitPriceCents: 25000, taxable: false }),
+      ],
       true,
     );
     expect(totals.subtotalCents).toBe(8 * 9500 + 25000);

@@ -45,3 +45,6 @@ next-env.d.ts
 
 # local database, uploads and generated files
 /.data/
+
+# local editor and agent settings
+/.claude/

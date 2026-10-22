@@ -40,7 +40,13 @@ async function findInvoiceFor(db: DbOrTx, event: PaymentEvent) {
   const [row] = await db
     .select()
     .from(invoices)
-    .where(and(eq(invoices.businessId, event.businessId), eq(invoices.status, "sent"), or(...conditions)))
+    .where(
+      and(
+        eq(invoices.businessId, event.businessId),
+        eq(invoices.status, "sent"),
+        or(...conditions),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
@@ -84,7 +90,9 @@ export async function recordPaymentEvent(db: Db, event: PaymentEvent): Promise<P
     const actor = { businessId: event.businessId, userId: null };
     const paymentId = inserted[0].id;
     if (!invoice) {
-      await audit(tx, actor, "payment.unmatched", "payment", paymentId, { amountCents: event.amountCents });
+      await audit(tx, actor, "payment.unmatched", "payment", paymentId, {
+        amountCents: event.amountCents,
+      });
       return "unmatched";
     }
     await applyToInvoice(tx, invoice.id, event.amountCents);
@@ -101,7 +109,12 @@ export async function recordPaymentEvent(db: Db, event: PaymentEvent): Promise<P
 }
 
 /** The owner matches an unmatched payment to an invoice by hand. */
-export async function matchPayment(db: Db, actor: ActorContext, paymentId: string, invoiceId: string) {
+export async function matchPayment(
+  db: Db,
+  actor: ActorContext,
+  paymentId: string,
+  invoiceId: string,
+) {
   await db.transaction(async (tx) => {
     const [payment] = await tx
       .select()
@@ -113,7 +126,13 @@ export async function matchPayment(db: Db, actor: ActorContext, paymentId: strin
     const [invoice] = await tx
       .select()
       .from(invoices)
-      .where(and(eq(invoices.id, invoiceId), eq(invoices.businessId, actor.businessId), eq(invoices.status, "sent")))
+      .where(
+        and(
+          eq(invoices.id, invoiceId),
+          eq(invoices.businessId, actor.businessId),
+          eq(invoices.status, "sent"),
+        ),
+      )
       .limit(1);
     if (!invoice) throw new UserFacingError("Choose an unpaid sent invoice.");
 
@@ -131,15 +150,26 @@ export async function matchPayment(db: Db, actor: ActorContext, paymentId: strin
       entityType: "payment",
       entityId: payment.id,
       idempotencyKey: `payment:${payment.id}`,
-      detail: { invoiceNumber: invoice.number, amountCents: payment.amountCents, matchedBy: "owner" },
+      detail: {
+        invoiceNumber: invoice.number,
+        amountCents: payment.amountCents,
+        matchedBy: "owner",
+      },
     });
-    await audit(tx, actor, "payment.matched_manually", "payment", payment.id, { invoiceId: invoice.id });
+    await audit(tx, actor, "payment.matched_manually", "payment", payment.id, {
+      invoiceId: invoice.id,
+    });
   });
 }
 
 export async function listPayments(db: DbOrTx, businessId: string) {
   return db
-    .select({ payment: payments, invoiceNumber: invoices.number, jobTitle: jobs.title, customerName: customers.name })
+    .select({
+      payment: payments,
+      invoiceNumber: invoices.number,
+      jobTitle: jobs.title,
+      customerName: customers.name,
+    })
     .from(payments)
     .leftJoin(invoices, eq(invoices.id, payments.invoiceId))
     .leftJoin(jobs, eq(jobs.id, invoices.jobId))
@@ -151,7 +181,12 @@ export async function listPayments(db: DbOrTx, businessId: string) {
 /** Unpaid sent invoices, for the manual matching picker. */
 export async function listOpenInvoices(db: DbOrTx, businessId: string) {
   return db
-    .select({ id: invoices.id, number: invoices.number, totalCents: invoices.totalCents, paidCents: invoices.paidCents })
+    .select({
+      id: invoices.id,
+      number: invoices.number,
+      totalCents: invoices.totalCents,
+      paidCents: invoices.paidCents,
+    })
     .from(invoices)
     .where(and(eq(invoices.businessId, businessId), eq(invoices.status, "sent")))
     .orderBy(invoices.number);

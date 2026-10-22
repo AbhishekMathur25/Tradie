@@ -70,7 +70,13 @@ export async function createQuoteDraft(
   const totals = documentTotals(input.lines, business.gstRegistered);
   const [row] = await db
     .insert(quotes)
-    .values({ businessId: actor.businessId, jobId: job.id, lines: input.lines, notes: input.notes, ...totals })
+    .values({
+      businessId: actor.businessId,
+      jobId: job.id,
+      lines: input.lines,
+      notes: input.notes,
+      ...totals,
+    })
     .returning();
   await audit(db, actor, "quote.created", "quote", row.id);
   await touchJob(db, job.id);
@@ -100,7 +106,13 @@ export async function updateQuoteDraft(
   const totals = documentTotals(input.lines, business.gstRegistered);
   const updated = await db
     .update(quotes)
-    .set({ lines: input.lines, notes: input.notes, ...totals, version: version + 1, updatedAt: new Date() })
+    .set({
+      lines: input.lines,
+      notes: input.notes,
+      ...totals,
+      version: version + 1,
+      updatedAt: new Date(),
+    })
     .where(and(eq(quotes.id, quote.id), eq(quotes.version, version)))
     .returning({ id: quotes.id });
   if (updated.length === 0) throw new StaleRecordError();
@@ -108,7 +120,11 @@ export async function updateQuoteDraft(
 }
 
 /** Rule check results for a quote, so the page can show them before sending. */
-export async function quoteChecks(db: Db, businessId: string, quoteId: string): Promise<RuleResult[]> {
+export async function quoteChecks(
+  db: Db,
+  businessId: string,
+  quoteId: string,
+): Promise<RuleResult[]> {
   const quote = await getQuote(db, businessId, quoteId);
   const business = await getBusiness(db, businessId);
   const { facts } = await loadJobFacts(db, businessId, quote.jobId);
@@ -127,7 +143,13 @@ export async function sendQuote(db: Db, actor: ActorContext, quoteId: string, to
     const number = await issueNumber(tx, actor.businessId, "quote");
     await tx
       .update(quotes)
-      .set({ status: "sent", number, sentAt: new Date(), validUntil: addDays(today, 30), updatedAt: new Date() })
+      .set({
+        status: "sent",
+        number,
+        sentAt: new Date(),
+        validUntil: addDays(today, 30),
+        updatedAt: new Date(),
+      })
       .where(eq(quotes.id, quote.id));
     const token = await linkFor(tx, actor.businessId, "quote", quote.id);
     await queueEmail(tx, {
@@ -181,9 +203,16 @@ export async function respondToQuote(
       subject: `Quote ${quote.number} ${accepted ? "accepted" : "declined"}`,
       body: `${customerName} ${accepted ? "accepted" : "declined"} quote ${quote.number} (${formatCents(quote.totalCents)}).`,
     });
-    await audit(tx, { businessId, userId: null }, `quote.${accepted ? "accepted" : "declined"}`, "quote", quote.id, {
-      name: customerName,
-    });
+    await audit(
+      tx,
+      { businessId, userId: null },
+      `quote.${accepted ? "accepted" : "declined"}`,
+      "quote",
+      quote.id,
+      {
+        name: customerName,
+      },
+    );
   });
 }
 
@@ -231,11 +260,11 @@ export async function getVariation(db: DbOrTx, businessId: string, variationId: 
   return row;
 }
 
-
 export async function sendVariation(db: Db, actor: ActorContext, variationId: string) {
   return db.transaction(async (tx) => {
     const variation = await getVariation(tx, actor.businessId, variationId);
-    if (variation.status !== "draft") throw new UserFacingError("This variation has already been sent.");
+    if (variation.status !== "draft")
+      throw new UserFacingError("This variation has already been sent.");
     const business = await getBusiness(tx, actor.businessId);
     const { facts, customer, job } = await loadJobFacts(tx, actor.businessId, variation.jobId);
     const results = checkVariationSend({ business, job: facts });
@@ -271,7 +300,8 @@ export async function respondToVariation(
 ) {
   await db.transaction(async (tx) => {
     const variation = await getVariation(tx, businessId, variationId);
-    if (variation.status !== "sent") throw new UserFacingError("This variation can no longer be changed.");
+    if (variation.status !== "sent")
+      throw new UserFacingError("This variation can no longer be changed.");
     const approved = decision === "approve";
     await tx
       .update(variations)
@@ -282,9 +312,16 @@ export async function respondToVariation(
         updatedAt: new Date(),
       })
       .where(eq(variations.id, variation.id));
-    await audit(tx, { businessId, userId: null }, `variation.${approved ? "approved" : "declined"}`, "variation", variation.id, {
-      name: customerName,
-    });
+    await audit(
+      tx,
+      { businessId, userId: null },
+      `variation.${approved ? "approved" : "declined"}`,
+      "variation",
+      variation.id,
+      {
+        name: customerName,
+      },
+    );
   });
 }
 
@@ -297,10 +334,17 @@ export const invoiceInputSchema = z.object({
   stageLabel: z.string().trim().max(120),
   lines: linesSchema,
   notes: z.string().trim().max(2000),
-  plannedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  plannedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
 });
 
-export async function getInvoice(db: DbOrTx, businessId: string, invoiceId: string): Promise<Invoice> {
+export async function getInvoice(
+  db: DbOrTx,
+  businessId: string,
+  invoiceId: string,
+): Promise<Invoice> {
   const [row] = await db
     .select()
     .from(invoices)
@@ -347,9 +391,15 @@ async function invoiceRuleResults(
   invoice: Pick<Invoice, "id" | "jobId" | "kind">,
   totalCents: number,
 ): Promise<{ results: RuleResult[]; customer: Customer }> {
-  const { facts, customer, invoices: jobInvoices } = await loadJobFacts(db, business.id, invoice.jobId);
+  const {
+    facts,
+    customer,
+    invoices: jobInvoices,
+  } = await loadJobFacts(db, business.id, invoice.jobId);
   const otherInvoices = jobInvoices
-    .filter((other) => other.id !== invoice.id && (other.status === "sent" || other.status === "paid"))
+    .filter(
+      (other) => other.id !== invoice.id && (other.status === "sent" || other.status === "paid"),
+    )
     .map((other) => ({ kind: other.kind, totalCents: other.totalCents }));
   const results = checkInvoiceSend({
     business,
@@ -361,7 +411,11 @@ async function invoiceRuleResults(
   return { results, customer };
 }
 
-export async function invoiceChecks(db: Db, businessId: string, invoiceId: string): Promise<RuleResult[]> {
+export async function invoiceChecks(
+  db: Db,
+  businessId: string,
+  invoiceId: string,
+): Promise<RuleResult[]> {
   const invoice = await getInvoice(db, businessId, invoiceId);
   const business = await getBusiness(db, businessId);
   const totals = documentTotals(invoice.lines, business.gstRegistered);
@@ -383,7 +437,9 @@ export async function updateInvoice(
     const invoice = await getInvoice(tx, actor.businessId, invoiceId);
     if (invoice.status === "void") throw new UserFacingError("This invoice has been voided.");
     if (invoice.paidCents > 0) {
-      throw new UserFacingError("A payment has been recorded, so this invoice can't be edited. Changes need a credit note.");
+      throw new UserFacingError(
+        "A payment has been recorded, so this invoice can't be edited. Changes need a credit note.",
+      );
     }
     const business = await getBusiness(tx, actor.businessId);
     // A sent invoice keeps the GST treatment it was issued with.
@@ -391,7 +447,12 @@ export async function updateInvoice(
     const totals = documentTotals(input.lines, gst);
     const isSent = invoice.status === "sent";
     if (isSent) {
-      const { results } = await invoiceRuleResults(tx, business, { ...invoice, kind: input.kind }, totals.totalCents);
+      const { results } = await invoiceRuleResults(
+        tx,
+        business,
+        { ...invoice, kind: input.kind },
+        totals.totalCents,
+      );
       if (isBlocked(results)) throw new UserFacingError(blockMessage(results));
     }
     const updated = await tx
@@ -435,11 +496,17 @@ function newPaymentReference(): string {
 export async function sendInvoice(db: Db, actor: ActorContext, invoiceId: string, today: string) {
   return db.transaction(async (tx) => {
     const invoice = await getInvoice(tx, actor.businessId, invoiceId);
-    if (invoice.status !== "draft") throw new UserFacingError("This invoice has already been sent.");
+    if (invoice.status !== "draft")
+      throw new UserFacingError("This invoice has already been sent.");
     const business = await getBusiness(tx, actor.businessId);
     // Totals are recalculated with the GST registration at the moment of sending.
     const totals = documentTotals(invoice.lines, business.gstRegistered);
-    const { results, customer } = await invoiceRuleResults(tx, business, invoice, totals.totalCents);
+    const { results, customer } = await invoiceRuleResults(
+      tx,
+      business,
+      invoice,
+      totals.totalCents,
+    );
     if (isBlocked(results)) throw new UserFacingError(blockMessage(results));
 
     const number = await issueNumber(tx, actor.businessId, "invoice");
@@ -467,7 +534,10 @@ export async function sendInvoice(db: Db, actor: ActorContext, invoiceId: string
 
     const job = await getJob(tx, actor.businessId, invoice.jobId);
     if (job.status === "contracted") {
-      await tx.update(jobs).set({ status: "in_progress", updatedAt: new Date() }).where(eq(jobs.id, job.id));
+      await tx
+        .update(jobs)
+        .set({ status: "in_progress", updatedAt: new Date() })
+        .where(eq(jobs.id, job.id));
     }
     const token = await linkFor(tx, actor.businessId, "invoice", invoice.id);
     const title = business.gstRegistered ? "Tax invoice" : "Invoice";
@@ -486,9 +556,18 @@ export async function sendInvoice(db: Db, actor: ActorContext, invoiceId: string
       entityType: "invoice",
       entityId: invoice.id,
       idempotencyKey: `invoice:${invoice.id}:v${invoice.version}`,
-      detail: { action: "create", number, totalCents: totals.totalCents, gstCents: totals.gstCents, dueOn },
+      detail: {
+        action: "create",
+        number,
+        totalCents: totals.totalCents,
+        gstCents: totals.gstCents,
+        dueOn,
+      },
     });
-    await audit(tx, actor, "invoice.sent", "invoice", invoice.id, { number, totalCents: totals.totalCents });
+    await audit(tx, actor, "invoice.sent", "invoice", invoice.id, {
+      number,
+      totalCents: totals.totalCents,
+    });
     await touchJob(tx, job.id);
     return { number, warnings: results };
   });
@@ -497,9 +576,13 @@ export async function sendInvoice(db: Db, actor: ActorContext, invoiceId: string
 export async function voidInvoice(db: Db, actor: ActorContext, invoiceId: string): Promise<void> {
   await db.transaction(async (tx) => {
     const invoice = await getInvoice(tx, actor.businessId, invoiceId);
-    if (invoice.paidCents > 0) throw new UserFacingError("Invoices with payments can't be voided. Use a credit note.");
+    if (invoice.paidCents > 0)
+      throw new UserFacingError("Invoices with payments can't be voided. Use a credit note.");
     if (invoice.status === "void") return;
-    await tx.update(invoices).set({ status: "void", updatedAt: new Date() }).where(eq(invoices.id, invoice.id));
+    await tx
+      .update(invoices)
+      .set({ status: "void", updatedAt: new Date() })
+      .where(eq(invoices.id, invoice.id));
     if (invoice.number) {
       await pushToAccounting(tx, {
         businessId: actor.businessId,
@@ -560,4 +643,3 @@ export function stageLine(description: string, amountExGstCents: number): Line {
     priceItemId: null,
   };
 }
-

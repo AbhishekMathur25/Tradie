@@ -13,7 +13,11 @@ import { customerUrl, queueEmail } from "./support";
 
 const isoOrNull = (value: Date | null) => (value ? toIsoDate(value) : null);
 
-export async function loadDashboard(db: DbOrTx, businessId: string, today: string): Promise<Dashboard> {
+export async function loadDashboard(
+  db: DbOrTx,
+  businessId: string,
+  today: string,
+): Promise<Dashboard> {
   const business = await getBusiness(db, businessId);
   const [jobRows, quoteRows, variationRows, invoiceRows, paymentRows] = await Promise.all([
     db
@@ -102,7 +106,11 @@ export function weeklySummaryText(businessName: string, dash: Dashboard): string
 }
 
 /** Queues the weekly summary for every owner of the business. */
-export async function sendWeeklySummary(db: DbOrTx, businessId: string, today: string): Promise<number> {
+export async function sendWeeklySummary(
+  db: DbOrTx,
+  businessId: string,
+  today: string,
+): Promise<number> {
   const business = await getBusiness(db, businessId);
   const dash = await loadDashboard(db, businessId, today);
   const owners = await db.select().from(users).where(eq(users.businessId, businessId));
